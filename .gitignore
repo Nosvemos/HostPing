@@ -33,6 +33,7 @@ venv.bak/
 # Scrapy
 .scrapy/
 *.json
+!config/providers.json
 *.csv
 *.xml
 

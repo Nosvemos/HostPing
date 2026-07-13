@@ -70,24 +70,30 @@ class NotificationPipeline:
         url = item['url']
 
         emoji = "🟢" if in_stock else "🔴"
-        title = f"🚨 VPS/VDS Stock Alert: {provider} 🚨"
-        message = (
-            f"**{title}**\n\n"
-            f"**Product:** {product}\n"
-            f"**Price:** {price}\n"
-            f"**Status:** {emoji} {status_text}\n"
-            f"**Link:** {url}"
-        )
 
         logger.info(f"NOTIFICATION STATUS CHANGE: {provider} - {product} is now {'IN STOCK' if in_stock else 'OUT OF STOCK'}")
 
-        # Send to Discord
+        # Send to Discord (Markdown format)
         if self.discord_webhook:
-            self._send_discord(message)
+            discord_msg = (
+                f"**🚨 VPS/VDS Stock Alert: {provider} 🚨**\n\n"
+                f"**Product:** {product}\n"
+                f"**Price:** {price}\n"
+                f"**Status:** {emoji} {status_text}\n"
+                f"**Link:** {url}"
+            )
+            self._send_discord(discord_msg)
 
-        # Send to Telegram
+        # Send to Telegram (HTML format)
         if self.telegram_token and self.telegram_chat_id:
-            self._send_telegram(message)
+            telegram_msg = (
+                f"🚨 <b>VPS/VDS Stock Alert: {provider}</b> 🚨\n\n"
+                f"<b>Product:</b> {product}\n"
+                f"<b>Price:</b> {price}\n"
+                f"<b>Status:</b> {emoji} {status_text}\n"
+                f"<b>Link:</b> {url}"
+            )
+            self._send_telegram(telegram_msg)
 
     def _send_discord(self, message):
         try:
@@ -107,18 +113,10 @@ class NotificationPipeline:
 
     def _send_telegram(self, message):
         try:
-            # Strip markdown double-asterisks as Telegram HTML/Markdown requires different formatting or parse_mode
-            # We will use HTML formatting for simple bolding
-            formatted_msg = message.replace("**", "<b>", 1).replace("**", "</b>", 1)  # replace title asterisks
-            formatted_msg = formatted_msg.replace("**Product:**", "<b>Product:</b>")
-            formatted_msg = formatted_msg.replace("**Price:**", "<b>Price:</b>")
-            formatted_msg = formatted_msg.replace("**Status:**", "<b>Status:</b>")
-            formatted_msg = formatted_msg.replace("**Link:**", "<b>Link:</b>")
-
             api_url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
             data = json.dumps({
                 "chat_id": self.telegram_chat_id,
-                "text": formatted_msg,
+                "text": message,
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True
             }).encode('utf-8')
@@ -135,3 +133,4 @@ class NotificationPipeline:
                     logger.warning(f"Telegram returned status: {response.status}")
         except Exception as e:
             logger.error(f"Failed to send Telegram notification: {str(e)}")
+

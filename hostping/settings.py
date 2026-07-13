@@ -33,8 +33,8 @@ ITEM_PIPELINES = {
     'hostping.pipelines.NotificationPipeline': 400,
 }
 
-# Use asyncio reactor
-TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
+# Use select reactor for Windows compatibility
+TWISTED_REACTOR = 'twisted.internet.selectreactor.SelectReactor'
 
 # Set logs to be clean
 LOG_LEVEL = 'INFO'

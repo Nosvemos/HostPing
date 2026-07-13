@@ -1,0 +1,88 @@
+[
+  {
+    "provider_name": "Datalix Ryzen Gen2",
+    "url": "https://datalix.eu/rent-ryzen-kvm-server",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "list",
+    "list_selectors": {
+      "container_css": "#service_display_gen2 .dx-card",
+      "name_css": "h3.tracking-tight::text",
+      "price_css": ".dx-price::text",
+      "stock_status_css": ".cursor-not-allowed::text, a.dx-cta::text",
+      "out_of_stock_indicator": "sold out"
+    }
+  },
+  {
+    "provider_name": "Datalix Ryzen Gen4",
+    "url": "https://datalix.eu/rent-ryzen-kvm-server",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "list",
+    "list_selectors": {
+      "container_css": "#service_display_gen4 .dx-card",
+      "name_css": "h3.tracking-tight::text",
+      "price_css": ".dx-price::text",
+      "stock_status_css": ".cursor-not-allowed::text, a.dx-cta::text",
+      "out_of_stock_indicator": "sold out"
+    }
+  },
+  {
+    "provider_name": "HostBrr 9950X VDS DE 1Gbps",
+    "url": "https://my.hostbrr.com/order/main/packages/9950XP/?group_id=68",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "list",
+    "list_selectors": {
+      "container_css": ".package.card",
+      "name_css": ".package-name h4::text",
+      "price_css": "select[name=\"pricing_id\"] option:first-child::attr(data-display-price)",
+      "stock_status_css": "select[name=\"pricing_id\"]::attr(disabled)",
+      "out_of_stock_indicator": "disabled"
+    }
+  },
+  {
+    "provider_name": "HostBrr 9950X VDS DE 10Gbps",
+    "url": "https://my.hostbrr.com/order/main/packages/9950XP/?group_id=61",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "list",
+    "list_selectors": {
+      "container_css": ".package.card",
+      "name_css": ".package-name h4::text",
+      "price_css": "select[name=\"pricing_id\"] option:first-child::attr(data-display-price)",
+      "stock_status_css": "select[name=\"pricing_id\"]::attr(disabled)",
+      "out_of_stock_indicator": "disabled"
+    }
+  },
+  {
+    "provider_name": "BuyVM Slices Luxembourg",
+    "url": "https://buyvm.net/assets/js/plans.js",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "buyvm_js",
+    "buyvm_config": {
+      "target_location": "Luxembourg",
+      "target_groups": ["slice"]
+    }
+  },
+  {
+    "provider_name": "OVH VPS Germany",
+    "url": "https://www.ovhcloud.com/ca/engine/api/v1/vps/order/rule/datacenter/",
+    "bypass_cloudflare": false,
+    "enabled": true,
+    "scraping_mode": "ovh_engine_api",
+    "ovh_config": {
+      "subsidiary": "WE",
+      "os": "Ubuntu 24.04",
+      "target_location": "DE",
+      "plans": [
+        {"name": "VPS-1 2027", "plan_code": "vps-2027-model1", "price": "€4.49/mo"},
+        {"name": "VPS-2 2027", "plan_code": "vps-2027-model2", "price": "€6.80/mo"},
+        {"name": "VPS-2 LZ 2027", "plan_code": "vps-2027-model2.LZ", "price": "€8.49/mo"},
+        {"name": "VPS-3 2027", "plan_code": "vps-2027-model3", "price": "€12.24/mo"},
+        {"name": "VPS-4 2027", "plan_code": "vps-2027-model4", "price": "€24.48/mo"}
+      ]
+    }
+  }
+]
