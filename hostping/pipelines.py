@@ -32,8 +32,8 @@ class HostPingPipeline:
     and updates Discord accordingly with clean, provider-specific messages.
     """
     def __init__(self):
-        self.state_file = 'hostping_state.json'
-        self.msg_ids_file = 'discord_message_ids.json'
+        self.state_file = 'data/hostping_state.json'
+        self.msg_ids_file = 'data/discord_message_ids.json'
         
         self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
         
@@ -42,6 +42,7 @@ class HostPingPipeline:
         self.scraped_items = []
 
     def open_spider(self, spider=None):
+        os.makedirs('data', exist_ok=True)
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Load state
