@@ -2,6 +2,7 @@ from hostping.parsers.list_parser import ListParser
 from hostping.parsers.single_parser import SingleParser
 from hostping.parsers.buyvm_parser import BuyvmParser
 from hostping.parsers.ovh_parser import OvhParser
+from hostping.parsers.alphavps_parser import AlphavpsParser
 
 class ParserFactory:
     """
@@ -18,6 +19,8 @@ class ParserFactory:
             return BuyvmParser()
         elif mode_lower == "ovh_engine_api":
             return OvhParser()
+        elif mode_lower == "alphavps":
+            return AlphavpsParser()
         else:
             # Default to single parser
             return SingleParser()

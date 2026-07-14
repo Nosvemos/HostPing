@@ -30,37 +30,41 @@ class CloudflareBypassMiddleware:
             decoded_value = value_list[0].decode('utf-8') if isinstance(value_list[0], bytes) else value_list[0]
             headers[decoded_key] = decoded_value
 
-        try:
-            # Impersonate a modern Chrome browser to bypass TLS fingerprint blocks
-            response = curl_requests.request(
-                method=request.method,
-                url=request.url,
-                headers=headers,
-                data=request.body,
-                impersonate="chrome110",
-                allow_redirects=True,
-                timeout=30
-            )
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Impersonate a modern Chrome browser to bypass TLS fingerprint blocks
+                response = curl_requests.request(
+                    method=request.method,
+                    url=request.url,
+                    headers=headers,
+                    data=request.body,
+                    impersonate="chrome110",
+                    allow_redirects=True,
+                    timeout=30
+                )
 
-            # Copy headers and remove encoding/length since curl_cffi automatically decompresses it
-            resp_headers = dict(response.headers)
-            for header_key in list(resp_headers.keys()):
-                if header_key.lower() in ('content-encoding', 'content-length'):
-                    resp_headers.pop(header_key, None)
+                # Copy headers and remove encoding/length since curl_cffi automatically decompresses it
+                resp_headers = dict(response.headers)
+                for header_key in list(resp_headers.keys()):
+                    if header_key.lower() in ('content-encoding', 'content-length'):
+                        resp_headers.pop(header_key, None)
 
-            # Return the response as a Scrapy HtmlResponse.
-            return HtmlResponse(
-                url=response.url,
-                status=response.status_code,
-                headers=resp_headers,
-                body=response.content,
-                encoding='utf-8',
-                request=request
-            )
+                # Return the response as a Scrapy HtmlResponse.
+                return HtmlResponse(
+                    url=response.url,
+                    status=response.status_code,
+                    headers=resp_headers,
+                    body=response.content,
+                    encoding='utf-8',
+                    request=request
+                )
 
-        except RequestsError as e:
-            logger.error(f"curl_cffi request failed for {request.url}: {str(e)}")
-            raise IgnoreRequest(f"Failed to bypass Cloudflare via curl_cffi: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error in CloudflareBypassMiddleware for {request.url}: {str(e)}")
-            raise IgnoreRequest(f"Unexpected middleware error: {str(e)}")
+            except RequestsError as e:
+                logger.error(f"curl_cffi request failed for {request.url} (Attempt {attempt+1}/{max_retries}): {str(e)}")
+                if attempt == max_retries - 1:
+                    raise IgnoreRequest(f"Failed to bypass Cloudflare via curl_cffi after {max_retries} attempts: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error in CloudflareBypassMiddleware for {request.url} (Attempt {attempt+1}/{max_retries}): {str(e)}")
+                if attempt == max_retries - 1:
+                    raise IgnoreRequest(f"Unexpected middleware error: {str(e)}")

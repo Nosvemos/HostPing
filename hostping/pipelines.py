@@ -49,54 +49,77 @@ class StockFilterPipeline:
 
 class NotificationPipeline:
     """
-    Pipeline that sends notifications to configured channels (Telegram, Discord, Console)
-    when an item successfully passes through the filters.
+    Pipeline that aggregates items successfully passed through the filters
+    and sends a consolidated notification when the spider closes.
     """
     def __init__(self):
         self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
         self.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
         self.telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        self.changed_items = []
 
     def process_item(self, item, spider):
-        # We run the notification dispatch in a background thread to prevent blocking Scrapy's main loop
-        return deferToThread(self._send_notifications, item)
+        self.changed_items.append(item)
+        return item
 
-    def _send_notifications(self, item):
-        provider = item['provider']
-        product = item['product_name']
-        price = item['price']
-        status_text = item['stock_status']
-        in_stock = item['in_stock']
-        url = item['url']
-
-        emoji = "🟢" if in_stock else "🔴"
-
-        logger.info(f"NOTIFICATION STATUS CHANGE: {provider} - {product} is now {'IN STOCK' if in_stock else 'OUT OF STOCK'}")
-
-        # Send to Discord (Markdown format)
+    def close_spider(self, spider):
+        if not self.changed_items:
+            return
+            
+        in_stock_items = [item for item in self.changed_items if item['in_stock']]
+        
+        if not in_stock_items:
+            # Changes happened, but they were all items going OUT OF STOCK
+            discord_msg = "🚨 **Stock Status Changed** 🚨\n\nSome tracked products are now out of stock. Currently, there are no new items in stock. 🔴"
+            telegram_msg = "🚨 <b>Stock Status Changed</b> 🚨\n\nSome tracked products are now out of stock. Currently, there are no new items in stock. 🔴"
+            return deferToThread(self._dispatch_notifications, discord_msg, telegram_msg)
+            
+        # Group items by provider
+        grouped = {}
+        for item in in_stock_items:
+            provider = item['provider']
+            if provider not in grouped:
+                grouped[provider] = []
+            grouped[provider].append(item)
+            
+        # Build consolidated Discord message (Markdown)
+        discord_lines = ["**🚨 NEW STOCK ALERT 🚨**\n"]
+        for provider, items in grouped.items():
+            discord_lines.append(f"**{provider}**")
+            for item in items:
+                discord_lines.append(f"🟢 {item['product_name']} - {item['price']} - [Buy Now](<{item['url']}>)")
+                logger.info(f"STATUS CHANGE: {provider} - {item['product_name']} is now IN STOCK")
+            discord_lines.append("") # Empty line between providers
+            
+        discord_msg = "\n".join(discord_lines)
+        
+        # Build consolidated Telegram message (HTML)
+        telegram_lines = ["🚨 <b>NEW STOCK ALERT</b> 🚨\n"]
+        for provider, items in grouped.items():
+            telegram_lines.append(f"<b>{provider}</b>")
+            for item in items:
+                telegram_lines.append(f"🟢 {item['product_name']} - {item['price']} - <a href=\"{item['url']}\">Buy Now</a>")
+            telegram_lines.append("")
+            
+        telegram_msg = "\n".join(telegram_lines)
+        
+        # Send notifications using deferToThread to not block reactor on shutdown (though shutdown blocking is less critical)
+        return deferToThread(self._dispatch_notifications, discord_msg, telegram_msg)
+        
+    def _dispatch_notifications(self, discord_msg, telegram_msg):
         if self.discord_webhook:
-            discord_msg = (
-                f"**🚨 VPS/VDS Stock Alert: {provider} 🚨**\n\n"
-                f"**Product:** {product}\n"
-                f"**Price:** {price}\n"
-                f"**Status:** {emoji} {status_text}\n"
-                f"**Link:** {url}"
-            )
             self._send_discord(discord_msg)
-
-        # Send to Telegram (HTML format)
+            
         if self.telegram_token and self.telegram_chat_id:
-            telegram_msg = (
-                f"🚨 <b>VPS/VDS Stock Alert: {provider}</b> 🚨\n\n"
-                f"<b>Product:</b> {product}\n"
-                f"<b>Price:</b> {price}\n"
-                f"<b>Status:</b> {emoji} {status_text}\n"
-                f"<b>Link:</b> {url}"
-            )
             self._send_telegram(telegram_msg)
 
     def _send_discord(self, message):
         try:
+            # Discord has a 2000 character limit per message.
+            # If the grouped message is too large, we must chunk it, but for our scale, it should fit.
+            if len(message) > 1900:
+                message = message[:1900] + "\n... [Message Truncated]"
+                
             data = json.dumps({"content": message}).encode('utf-8')
             req = urllib.request.Request(
                 self.discord_webhook,

@@ -22,8 +22,18 @@ class DynamicSpider(scrapy.Spider):
             return
 
         for provider in providers:
-            if not provider.get('enabled', True):
-                self.logger.info(f"Skipping disabled provider: {provider.get('provider_name')}")
+            provider_name = provider.get('provider_name', 'unknown')
+            
+            # Check for an environment variable override: ENABLE_PROVIDER_NAME
+            env_key = f"ENABLE_{provider_name.replace(' ', '_').replace('-', '_').upper()}"
+            env_val = os.getenv(env_key)
+            
+            is_enabled = provider.get('enabled', True)
+            if env_val is not None:
+                is_enabled = env_val.lower() in ('true', '1', 'yes')
+                
+            if not is_enabled:
+                self.logger.info(f"Skipping disabled provider: {provider_name}")
                 continue
 
             mode = provider.get('scraping_mode', 'single')

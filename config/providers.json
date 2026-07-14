@@ -3,7 +3,7 @@
     "provider_name": "Datalix Ryzen Gen2",
     "url": "https://datalix.eu/rent-ryzen-kvm-server",
     "bypass_cloudflare": true,
-    "enabled": true,
+    "enabled": false,
     "scraping_mode": "list",
     "list_selectors": {
       "container_css": "#service_display_gen2 .dx-card",
@@ -70,7 +70,7 @@
     "provider_name": "OVH VPS Germany",
     "url": "https://www.ovhcloud.com/ca/engine/api/v1/vps/order/rule/datacenter/",
     "bypass_cloudflare": false,
-    "enabled": true,
+    "enabled": false,
     "scraping_mode": "ovh_engine_api",
     "ovh_config": {
       "subsidiary": "WE",
@@ -79,10 +79,25 @@
       "plans": [
         {"name": "VPS-1 2027", "plan_code": "vps-2027-model1", "price": "€4.49/mo"},
         {"name": "VPS-2 2027", "plan_code": "vps-2027-model2", "price": "€6.80/mo"},
-        {"name": "VPS-2 LZ 2027", "plan_code": "vps-2027-model2.LZ", "price": "€8.49/mo"},
         {"name": "VPS-3 2027", "plan_code": "vps-2027-model3", "price": "€12.24/mo"},
         {"name": "VPS-4 2027", "plan_code": "vps-2027-model4", "price": "€24.48/mo"}
       ]
     }
+  },
+  {
+    "provider_name": "AlphaVPS Ryzen Germany",
+    "bypass_cloudflare": true,
+    "enabled": true,
+    "scraping_mode": "alphavps",
+    "target_location": "Germany",
+    "plans": [
+      {"name": "R1G Starter", "url": "https://alphavps.com/clients/cart.php?a=add&pid=413", "price": "€2.99/mo"},
+      {"name": "R2G Developer", "url": "https://alphavps.com/clients/cart.php?a=add&pid=414", "price": "€5.99/mo"},
+      {"name": "R3G Business", "url": "https://alphavps.com/clients/cart.php?a=add&pid=415", "price": "€8.99/mo"},
+      {"name": "R4G Gaming", "url": "https://alphavps.com/clients/cart.php?a=add&pid=416", "price": "€11.99/mo"},
+      {"name": "R6G Professional", "url": "https://alphavps.com/clients/cart.php?a=add&pid=417", "price": "€17.99/mo"},
+      {"name": "R8G Enterprise", "url": "https://alphavps.com/clients/cart.php?a=add&pid=418", "price": "€23.99/mo"},
+      {"name": "R16G Ultimate", "url": "https://alphavps.com/clients/cart.php?a=add&pid=419", "price": "€47.99/mo"}
+    ]
   }
 ]

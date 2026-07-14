@@ -38,3 +38,8 @@ TWISTED_REACTOR = 'twisted.internet.selectreactor.SelectReactor'
 
 # Set logs to be clean
 LOG_LEVEL = 'INFO'
+
+# Retry Settings
+RETRY_ENABLED = True
+RETRY_TIMES = 3
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
