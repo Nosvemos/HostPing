@@ -1,7 +1,10 @@
 import os
 import json
+import logging
 import scrapy
 from hostping.parsers import ParserFactory
+
+logger = logging.getLogger(__name__)
 
 class DynamicSpider(scrapy.Spider):
     name = "dynamic_spider"
@@ -11,14 +14,14 @@ class DynamicSpider(scrapy.Spider):
         config_path = os.path.join(project_root, 'config', 'providers.json')
 
         if not os.path.exists(config_path):
-            self.logger.error(f"Configuration file not found at: {config_path}")
+            logger.error(f"Configuration file not found at: {config_path}")
             return
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 providers = json.load(f)
         except Exception as e:
-            self.logger.error(f"Failed to load or parse providers config: {str(e)}")
+            logger.error(f"Failed to load or parse providers config: {str(e)}")
             return
 
         for provider in providers:
@@ -33,7 +36,7 @@ class DynamicSpider(scrapy.Spider):
                 is_enabled = env_val.lower() in ('true', '1', 'yes')
                 
             if not is_enabled:
-                self.logger.info(f"Skipping disabled provider: {provider_name}")
+                logger.info(f"Skipping disabled provider: {provider_name}")
                 continue
 
             mode = provider.get('scraping_mode', 'single')
@@ -43,14 +46,14 @@ class DynamicSpider(scrapy.Spider):
                 for request in parser.generate_requests(self, provider):
                     yield request
             except Exception as e:
-                self.logger.error(f"Failed to generate requests for {provider.get('provider_name')} using {mode} parser: {str(e)}")
+                logger.error(f"Failed to generate requests for {provider.get('provider_name')} using {mode} parser: {str(e)}")
 
     def parse(self, response):
         provider = response.meta.get('provider_config', {})
         provider_name = provider.get('provider_name', 'Unknown')
         mode = provider.get('scraping_mode', 'single')
 
-        self.logger.info(f"Parsing page for: {provider_name} | URL: {response.url}")
+        logger.info(f"Parsing page for: {provider_name} | URL: {response.url}")
 
         parser = ParserFactory.get_parser(mode)
         
@@ -58,4 +61,4 @@ class DynamicSpider(scrapy.Spider):
             for item in parser.parse(response, self):
                 yield item
         except Exception as e:
-            self.logger.error(f"Failed to parse response for {provider_name} using {mode} parser: {str(e)}")
+            logger.error(f"Failed to parse response for {provider_name} using {mode} parser: {str(e)}")

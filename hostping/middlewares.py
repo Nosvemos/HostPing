@@ -14,13 +14,13 @@ class CloudflareBypassMiddleware:
     browser TLS/JA3/JA4 fingerprints without blocking the main event loop.
     """
 
-    def process_request(self, request, spider):
+    async def process_request(self, request, spider=None):
         if not request.meta.get('bypass_cloudflare'):
             # Return None to let Scrapy's default downloader process this request
             return None
 
         logger.info(f"Bypassing Cloudflare for URL: {request.url} using curl_cffi in background thread...")
-        return deferToThread(self._download_with_curl, request)
+        return await deferToThread(self._download_with_curl, request)
 
     def _download_with_curl(self, request):
         # Parse Scrapy headers to dict for curl_cffi compatibility

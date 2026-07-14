@@ -11,4 +11,5 @@ services:
       - SCAN_INTERVAL_SECONDS=60
     volumes:
       - ./hostping_state.json:/app/hostping_state.json
+      - ./discord_message_ids.json:/app/discord_message_ids.json
       - ./logs:/app/logs

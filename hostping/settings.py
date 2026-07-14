@@ -29,15 +29,41 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Item Pipelines configuration
 ITEM_PIPELINES = {
-    'hostping.pipelines.StockFilterPipeline': 300,
-    'hostping.pipelines.NotificationPipeline': 400,
+    'hostping.pipelines.HostPingPipeline': 300,
 }
 
 # Use select reactor for Windows compatibility
 TWISTED_REACTOR = 'twisted.internet.selectreactor.SelectReactor'
 
-# Set logs to be clean
-LOG_LEVEL = 'INFO'
+# Clean Logging configuration
+LOG_LEVEL = 'WARNING'
+
+import logging
+import sys
+
+# Configure our custom application logger (hostping)
+app_logger = logging.getLogger('hostping')
+app_logger.setLevel(logging.INFO)
+app_logger.propagate = False # Prevent bubbling to Scrapy's root logger
+
+# Remove any default handlers to avoid duplication
+for h in list(app_logger.handlers):
+    app_logger.removeHandler(h)
+
+# Add clean stream handler for standard stdout
+log_handler = logging.StreamHandler(sys.stdout)
+log_handler.setLevel(logging.INFO)
+log_formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+log_handler.setFormatter(log_formatter)
+app_logger.addHandler(log_handler)
+
+# Silence scrapy's item dropper warnings specifically
+logging.getLogger('scrapy.core.scraper').setLevel(logging.ERROR)
+
+# Extensions configuration
+EXTENSIONS = {
+    'hostping.extensions.SilenceScrapyNoiseExtension': 0,
+}
 
 # Retry Settings
 RETRY_ENABLED = True
