@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  hostping_bot:
+    build: .
+    container_name: hostping_bot
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - SCAN_INTERVAL_SECONDS=60
+    volumes:
+      - ./hostping_state.json:/app/hostping_state.json
+      - ./logs:/app/logs
