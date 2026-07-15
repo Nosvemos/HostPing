@@ -153,7 +153,8 @@ class HostPingPipeline:
             logger.error(f"Failed to write state file: {str(e)}")
 
     def _build_discord_message(self, provider, items):
-        discord_lines = [f"**{provider}**"]
+        description_lines = []
+        any_in_stock = False
         for item in items:
             key = f"{provider}_{item['product_name']}".strip().replace(" ", "_").lower()
             item_state = self.state.get(key, {})
@@ -161,20 +162,27 @@ class HostPingPipeline:
             last_in_stock = item_state.get('last_in_stock')
             
             if in_stock:
-                line = f"🟢 {item['product_name']} - {item['price']} - [Buy Now](<{item['url']}>)"
+                any_in_stock = True
+                line = f"🟢 **{item['product_name']}** - {item['price']} - [Buy Now](<{item['url']}>)"
             else:
                 last_in_stock_str = last_in_stock if last_in_stock else "unknown"
                 line = f"🔴 {item['product_name']} - {item['price']} - Last in stock: {last_in_stock_str}"
-            discord_lines.append(line)
+            description_lines.append(line)
             
-        return "\n".join(discord_lines)
+        color = 3066993 if any_in_stock else 15158332 # 0x2ECC71 (Green) or 0xE74C3C (Red)
+        
+        embed = {
+            "title": provider,
+            "description": "\n".join(description_lines),
+            "color": color,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        return {"embeds": [embed]}
 
-    def _dispatch_discord(self, provider, message):
+    def _dispatch_discord(self, provider, payload):
         try:
-            if len(message) > 1900:
-                message = message[:1900] + "\n... [Message Truncated]"
-                
-            data = json.dumps({"content": message}).encode('utf-8')
+            data = json.dumps(payload).encode('utf-8')
             message_id = self.message_ids.get(provider)
             
             if message_id:
