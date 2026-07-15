@@ -9,6 +9,10 @@ logger = logging.getLogger(__name__)
 class DynamicSpider(scrapy.Spider):
     name = "dynamic_spider"
 
+    def __init__(self, target_provider=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.target_provider = target_provider
+
     async def start(self):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         config_path = os.path.join(project_root, 'config', 'providers.json')
@@ -26,6 +30,10 @@ class DynamicSpider(scrapy.Spider):
 
         for provider in providers:
             provider_name = provider.get('provider_name', 'unknown')
+            
+            # If target_provider is specified, filter only this one
+            if self.target_provider and provider_name != self.target_provider:
+                continue
             
             # Check for an environment variable override: ENABLE_PROVIDER_NAME
             env_key = f"ENABLE_{provider_name.replace(' ', '_').replace('-', '_').upper()}"

@@ -5,6 +5,7 @@ import time
 import logging
 import urllib.request
 from datetime import datetime
+from scrapy.exceptions import DropItem
 from twisted.internet.threads import deferToThread
 
 logger = logging.getLogger(__name__)
@@ -94,7 +95,31 @@ class HostPingPipeline:
                 self.message_ids = {}
 
     def process_item(self, item, spider=None):
-        item['price'] = clean_price(item.get('price', ''))
+        provider = item['provider']
+        price_str = clean_price(item.get('price', ''))
+        item['price'] = price_str
+        
+        # Get price range from environment variables using normalized provider name prefix
+        env_prefix = provider.replace(" ", "_").replace("-", "_").upper()
+        min_price_val = os.getenv(f"{env_prefix}_MIN_PRICE")
+        max_price_val = os.getenv(f"{env_prefix}_MAX_PRICE")
+        
+        price_num = extract_numeric_price(price_str)
+        
+        if min_price_val is not None:
+            try:
+                if price_num < float(min_price_val):
+                    raise DropItem(f"Price {price_num} below min limit {min_price_val} for {provider}")
+            except ValueError:
+                pass
+                
+        if max_price_val is not None:
+            try:
+                if price_num > float(max_price_val):
+                    raise DropItem(f"Price {price_num} above max limit {max_price_val} for {provider}")
+            except ValueError:
+                pass
+                
         self.scraped_items.append(item)
         return item
 
@@ -251,3 +276,13 @@ class HostPingPipeline:
                     logger.warning(f"Discord returned status: {response.status}")
         except Exception as e:
             logger.error(f"Failed to send Discord notification for '{provider}': {str(e)}")
+
+class TestPrintPipeline:
+    """
+    Downloader pipeline used exclusively during test runs (via test_provider.py)
+    to print clean, structured parse results to the console.
+    """
+    def process_item(self, item, spider=None):
+        item['price'] = clean_price(item.get('price', ''))
+        print(f"\n[TEST SCRAPE SUCCESS] {item['provider']} | {item['product_name']} | Price: {item['price']} | In Stock: {item['in_stock']} | Link: {item['url']}")
+        return item
