@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import logging
 import urllib.request
 from datetime import datetime
@@ -25,6 +26,16 @@ def clean_price(price_str):
     price = price.replace(" /mo", "/mo").replace("//mo", "/mo")
     return price
 
+def extract_numeric_price(price_str):
+    if not price_str:
+        return 0.0
+    # Extract only digits and decimal dot (e.g. €23.99/mo -> 23.99)
+    cleaned = re.sub(r'[^\d.]', '', price_str)
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 0.0
+
 class HostPingPipeline:
     """
     Consolidated pipeline that collects all scraped items, compares them to the local
@@ -43,22 +54,32 @@ class HostPingPipeline:
 
     def open_spider(self, spider=None):
         os.makedirs('data', exist_ok=True)
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_ts = int(time.time())
         
         # Load state
         if os.path.exists(self.state_file):
             try:
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     raw_state = json.load(f)
-                # Migrate old flat bool state to dict state
+                # Migrate old flat bool state and string timestamps to Unix epoch int
                 for k, v in raw_state.items():
                     if isinstance(v, bool):
                         self.state[k] = {
                             "in_stock": v,
-                            "last_in_stock": now_str if v else None
+                            "last_in_stock": now_ts if v else None
                         }
                     else:
-                        self.state[k] = v
+                        last_in_stock = v.get('last_in_stock')
+                        if isinstance(last_in_stock, str):
+                            try:
+                                dt = datetime.strptime(last_in_stock, "%Y-%m-%d %H:%M:%S")
+                                last_in_stock = int(dt.timestamp())
+                            except Exception:
+                                last_in_stock = None
+                        self.state[k] = {
+                            "in_stock": v.get('in_stock', False),
+                            "last_in_stock": last_in_stock
+                        }
             except Exception as e:
                 logger.error(f"Error loading/migrating state file: {str(e)}")
                 self.state = {}
@@ -81,7 +102,7 @@ class HostPingPipeline:
         if not self.scraped_items:
             return
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_ts = int(time.time())
         
         # Group scraped items by provider
         grouped = {}
@@ -119,7 +140,7 @@ class HostPingPipeline:
                 
                 # Determine new last_in_stock value
                 if current_status:
-                    new_last_in_stock = now_str
+                    new_last_in_stock = now_ts
                 else:
                     new_last_in_stock = prev_last_in_stock
                 
@@ -155,7 +176,8 @@ class HostPingPipeline:
     def _build_discord_message(self, provider, items):
         description_lines = []
         any_in_stock = False
-        for item in items:
+        sorted_items = sorted(items, key=lambda x: extract_numeric_price(x.get('price', '')))
+        for item in sorted_items:
             key = f"{provider}_{item['product_name']}".strip().replace(" ", "_").lower()
             item_state = self.state.get(key, {})
             in_stock = item_state.get('in_stock', False)
@@ -165,7 +187,10 @@ class HostPingPipeline:
                 any_in_stock = True
                 line = f"🟢 **{item['product_name']}** - {item['price']} - [Buy Now](<{item['url']}>)"
             else:
-                last_in_stock_str = last_in_stock if last_in_stock else "unknown"
+                if last_in_stock:
+                    last_in_stock_str = f"<t:{last_in_stock}:f> (<t:{last_in_stock}:R>)"
+                else:
+                    last_in_stock_str = "unknown"
                 line = f"🔴 {item['product_name']} - {item['price']} - Last in stock: {last_in_stock_str}"
             description_lines.append(line)
             
