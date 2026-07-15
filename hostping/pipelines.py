@@ -145,13 +145,12 @@ class HostPingPipeline:
                     discord_msg = self._build_discord_message(provider, items)
                     await deferToThread(self._dispatch_discord, provider, discord_msg)
 
-        # Save state if anything changed
-        if state_changed:
-            try:
-                with open(self.state_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.state, f, indent=4)
-            except Exception as e:
-                logger.error(f"Failed to write state file: {str(e)}")
+        # Always save state to persist updated last_in_stock timestamps
+        try:
+            with open(self.state_file, 'w', encoding='utf-8') as f:
+                json.dump(self.state, f, indent=4)
+        except Exception as e:
+            logger.error(f"Failed to write state file: {str(e)}")
 
     def _build_discord_message(self, provider, items):
         discord_lines = [f"**{provider}**"]
